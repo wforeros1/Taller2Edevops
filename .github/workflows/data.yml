@@ -1,0 +1,33 @@
+name: 'Cargar Datos desde SQL'
+
+on:
+  push:
+    branches:
+      - main 
+    paths:
+      - 'sql/**' 
+  workflow_dispatch: 
+
+jobs:
+  load-data:
+    name: 'Cargar Archivo SQL a la Base de Datos'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Clonar el repositorio'
+        uses: actions/checkout@v3
+
+      - name: 'Copiar script SQL y ejecutar en el contenedor'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cat ./sql/init.sql > ./init.sql
+            docker cp ./init.sql postgresql-dev:/tmp/init.sql
+
+            docker exec -i postgresql-dev psql \
+              -U ${{ secrets.POSTGRES_USER }} \
+              -d ${{ secrets.POSTGRES_DB }} \
+              -f /tmp/init.sql
